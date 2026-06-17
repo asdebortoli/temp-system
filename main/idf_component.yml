@@ -1,0 +1,10 @@
+## Dependências gerenciadas (ESP-IDF Component Manager).
+## Use `idf.py reconfigure` após alterar este arquivo.
+dependencies:
+  idf:
+    version: ">=5.3"
+  # Sensor de temperatura DS18B20 sobre 1-Wire (PLAN §2 — GPIO4).
+  espressif/onewire_bus: "^1.0.2"
+  espressif/ds18b20: "^0.1.2"
+  # TODO Chunk B: decidir driver do DHT22 (componente da comunidade vs. bit-bang
+  # próprio — ver PLAN §9). Adicionar a dependência aqui quando definido.

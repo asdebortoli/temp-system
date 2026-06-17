@@ -1,42 +1,64 @@
-# Projeto 02 - Sistemas em Tempo Real
+# TMT — Sistema Inteligente de Monitoramento Térmico de Baixo Custo
 
-Acadêmicos: Alexandre Debortoli de Souza e Maria Julia Lamim Severino
-Orientador: Felipe Viel
+Projeto de extensão (UNIVALI). Firmware ESP-IDF/FreeRTOS para **ESP32-WROOM-32 (DevKit V1)** que
+monitora a temperatura, a umidade e o estado de ambientes refrigerados de pequenos
+estabelecimentos (restaurantes, laboratórios), publicando telemetria e alertas em tempo real.
 
-## Sistema de Monitoramento de Veículo
+Acadêmicos: Alexandre Debortoli de Souza e Maria Julia Lamim Severino · Orientador: Felipe Viel
 
-Este projeto foi gerado a partir do exemplo `hello_world` da Espressif. O sistema é desenvolvido para a placa ESP32 e utiliza o FreeRTOS.
+## Arquitetura
 
-## Estrutura do Projeto
+```
+ESP32 (sensores → máquina de estados E1–E6 → MQTT/TLS)
+   → HiveMQ Cloud (broker)
+   → Bridge Python (paho + Telegram) → Supabase (Postgres)
+   → Telegram (responsável)
+```
 
-Dentro da pasta `main`, você encontrará três arquivos .c:
+O ESP32 lê os sensores, aplica a máquina de estados (E1 normal … E6 falha de energia) e publica
+em um broker MQTT sobre TLS. Um serviço-ponte em Python ingere as mensagens, aplica regras de
+negócio, persiste no Supabase e notifica o responsável via Telegram. Quando offline, o firmware
+armazena as leituras em um buffer em NVS e retransmite ao reconectar.
 
-- `cyclic_executive.c`: Implementação da versão com execução cíclica.
-- `interrupt.c`: Implementação da versão que utiliza interrupções.
-- `microkernel.c`: Implementação da versão com microkernel.
+Visão completa, requisitos e divisão do trabalho em **[`PLAN.md`](PLAN.md)**. O trabalho é
+dividido em chunks independentes em **[`tasks/`](tasks/)** (`ChunkA.md` … `ChunkH.md`),
+executados em ordem A → H.
 
-## Como Rodar
+## Mapa de pinos (Quadro 3)
 
-	1. Escolha a versão que deseja executar e modifique o arquivo `CMakeLists.txt` na pasta `main` para incluir o arquivo correspondente. Por exemplo, para rodar a versão do microkernel, você deve alterar a linha idf_component_register da seguinte forma:
+| Componente           | GPIO   | Função                              |
+|----------------------|--------|-------------------------------------|
+| DS18B20 (temperatura)| GPIO4  | Temperatura interna (1-Wire)        |
+| DHT22 (umidade)      | GPIO5  | Umidade relativa (digital)          |
+| LDR (luz)            | GPIO34 | Detecção de porta aberta (ADC1)     |
+| Botão de pânico      | GPIO15 | Acionamento de emergência (IRQ)     |
+| Sensor de rede       | GPIO35 | Detecção de falta de energia (ADC1) |
+| Buzzer               | GPIO13 | Sinalização sonora local            |
 
-  ```
-  idf_component_register(SRCS "microkernel.c" INCLUDE_DIRS "")
-  ```
+## Estrutura do firmware (`main/`)
 
-  2.	Compile o projeto:
+| Arquivo                 | Responsabilidade                                      | Chunk |
+|-------------------------|-------------------------------------------------------|-------|
+| `main.c`                | `app_main`: inicialização e criação das tarefas       | A     |
+| `config.h`              | Pinos, limiares, intervalos, tópicos MQTT (RN03)      | A     |
+| `sensors.{c,h}`         | Drivers e aquisição dos sensores                      | B     |
+| `state_machine.{c,h}`   | Lógica dos estados E1–E6, dedup e normalização        | C     |
+| `net.{c,h}`             | Wi-Fi + cliente MQTT/TLS                               | D     |
+| `storage.{c,h}`         | Buffer offline em NVS (partição `buffer`)             | E     |
 
-  ```
-  idf.py build
-  ```
+Apenas uma partição de aplicação (`factory`); a partição de dados `buffer` (NVS) guarda o buffer
+offline. Veja `partitions.csv`.
 
-  3.	Faça o upload para a placa:
-  ```
-  idf.py flash
-  ```
+## Como compilar e rodar
 
-  4.	Monitore a saída:
-  ```
-  idf.py monitor
-  ```
+Requer o ambiente ESP-IDF (`idf.py` no PATH, `IDF_PATH` definido). Há um `.devcontainer`
+(ESP-IDF + QEMU) para VS Code / Codespaces.
 
-Após seguir esses passos, o sistema estará pronto para testes.
+```sh
+idf.py set-target esp32   # apenas se for reconfigurar o alvo
+idf.py reconfigure        # após alterar idf_component.yml / partições
+idf.py build              # compilar
+idf.py flash monitor      # gravar na placa e ver a saída serial (Ctrl+] para sair)
+```
+
+> As mensagens de console e os comentários do código estão em **português**.

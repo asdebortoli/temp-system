@@ -1,1 +1,6 @@
-idf_component_register(SRCS "microkernel.c" INCLUDE_DIRS "")
+idf_component_register(SRCS "main.c"
+                            "sensors.c"
+                            "state_machine.c"
+                            "net.c"
+                            "storage.c"
+                       INCLUDE_DIRS ".")
