@@ -73,4 +73,21 @@
 #define MQTT_TOPIC_HEARTBEAT "heartbeat"
 #define MQTT_TOPIC_CMD       "cmd"
 
+/* ---------------------------------------------------------------------------
+ * Rede (Chunk D) — Wi-Fi + MQTT/TLS
+ * As credenciais sensíveis ficam em secrets.h (NÃO versionado): copie
+ * main/secrets.h.example para main/secrets.h e preencha WIFI_* e MQTT_*.
+ * MQTT_HOST = IP do Mac na LAN onde roda o broker Mosquitto em Docker.
+ * ------------------------------------------------------------------------- */
+#include "secrets.h"           /* WIFI_SSID, WIFI_PASS, MQTT_HOST, MQTT_USER, MQTT_PASS */
+#define MQTT_PORT            8883          /* MQTT sobre TLS (RNF04)               */
+#define SNTP_SERVER          "pool.ntp.org"
+
+/* ---------------------------------------------------------------------------
+ * Buffer offline (Chunk E) — ring buffer na partição NVS "buffer"
+ * ------------------------------------------------------------------------- */
+#define BUFFER_PARTITION_NAME    "buffer"
+#define BUFFER_CAPACITY_RECORDS  200       /* nº máx. de registros; ao encher sobrescreve o mais antigo */
+#define HEAP_LOG_INTERVAL_S      300       /* período do log de heap livre (endurecimento RNF07)         */
+
 #endif /* CONFIG_H */

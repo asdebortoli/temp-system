@@ -1,3 +1,18 @@
 build
 managed_components/
 *.md
+
+# Segredos e artefatos locais (Chunk D+) — nunca versionar
+main/secrets.h
+cloud/bridge/.env
+cloud/broker/certs/
+cloud/broker/passwd
+
+# Python (bridge)
+__pycache__/
+*.pyc
+.venv/
+
+# Supabase (stack local)
+cloud/supabase/.branches/
+cloud/supabase/.temp/

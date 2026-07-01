@@ -1,0 +1,15 @@
+# docker-compose.yml — broker Mosquitto local com TLS (Chunk D).
+# Uso:
+#   ./gen-certs.sh        # gera certs + passwd (uma vez)
+#   docker compose up -d  # sobe o broker em mqtts://<IP-do-Mac>:8883
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: tmt-mosquitto
+    ports:
+      - "8883:8883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./certs:/mosquitto/certs:ro
+      - ./passwd:/mosquitto/config/passwd:ro
+    restart: unless-stopped
