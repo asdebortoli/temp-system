@@ -23,10 +23,10 @@ void app_main(void)
              DEVICE_ID, SAMPLE_INTERVAL_S, HEARTBEAT_INTERVAL_S);
     ESP_LOGI(TAG, "==============================================");
 
-    storage_init();        /* buffer offline (NVS) — Chunk E */
-    sensors_init();        /* aquisição de sensores — Chunk B */
-    net_init();            /* Wi-Fi + MQTT/TLS — Chunk D       */
-    state_machine_start(); /* lógica E1–E6 — Chunk C           */
+    storage_init();        /* buffer offline (NVS) — Chunk E   */
+    net_init();            /* Wi-Fi + SNTP + MQTT/TLS — Chunk D */
+    sensors_init();        /* aquisição de sensores — Chunk B   */
+    state_machine_start(); /* lógica E1/E2 + pânico — Chunk C   */
 
-    ESP_LOGI(TAG, "Inicialização concluída (esqueleto Chunk A).");
+    ESP_LOGI(TAG, "Inicialização concluída.");
 }
