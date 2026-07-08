@@ -1,25 +1,26 @@
-# Matriz de requisitos — TMT (demo de temperatura)
+# Matriz de requisitos — TMT (monitor de geladeira)
 
 Legenda: ✅ atendido/verificado · ⏳ implementado, verificação em hardware pendente ·
-➖ fora do escopo desta demo (sensor não validado ou hardware específico).
+➖ fora do escopo do produto (removido).
 
-Escopo desta entrega: fluxo ponta a ponta **apenas para temperatura (DS18B20)**. Broker e
-Supabase locais em Docker; bridge no host. Evidências marcadas "(sim.)" foram obtidas simulando
-o ESP32 com `mosquitto_pub` (o firmware é gravado pelo usuário na placa).
+Escopo do produto: **temperatura (DS18B20) + botão de pânico + buzzer**. Umidade, porta e falha
+de energia foram **removidas** (hardware e código). Broker e Supabase locais em Docker; bridge no
+host. Validado na placa passo a passo pela série de correção **R1–R6** (`tasks/ChunkR1.md`…`R6.md`):
+buzzer é passivo (tom PWM via transistor NPN) e o pânico é toggle (liga/desliga a cada toque).
 
 ## Funcionais (RF)
 
 | Req | Descrição | Status | Evidência |
 |-----|-----------|--------|-----------|
-| RF01 | Leitura periódica dos sensores | ✅ | `acquisition_task` a cada `SAMPLE_INTERVAL_S`; telemetria inserida em `readings` (sim.) |
-| RF02 | Alerta térmico | ✅ | E2 em `state_machine.c`; evento `thermal` inserido e alerta Telegram formatado (sim.) |
-| RF03 | Alerta de umidade | ➖ | DHT não validado — E4 desativado |
-| RF04 | Porta aberta tempo demais | ➖ | LDR não validado — E3 desativado |
-| RF05 | Pânico + buzzer | ⏳ | E5 + `buzzer_on()` implementados; depende do botão/buzzer em HW |
-| RF06 | Alerta de falta de energia | ➖ | sensor de rede não validado — E6 desativado |
+| RF01 | Leitura periódica dos sensores | ✅ | `acquisition_task` a cada `SAMPLE_INTERVAL_S`; temperatura na placa (R2) chega em `readings` (R6) |
+| RF02 | Alerta térmico | ✅ | E2 em `state_machine.c`; um alerta ao sair da faixa (R5) → evento `thermal` + Telegram (R6) |
+| RF03 | Alerta de umidade | ➖ | removido do produto (escopo geladeira) |
+| RF04 | Porta aberta tempo demais | ➖ | removido do produto (escopo geladeira) |
+| RF05 | Pânico + buzzer | ✅ | E5 toggle (R4) + buzzer passivo tom PWM (R3) validados na placa; `panic` → Telegram (R6) |
+| RF06 | Alerta de falta de energia | ➖ | removido do produto (escopo geladeira) |
 | RF07 | Heartbeat + alarme de ausência | ✅ | `heartbeat_task` (firmware) + `watchdog_loop` no bridge (offline após 2× intervalo) |
-| RF08 | Buffer offline + retransmissão | ⏳ | ring buffer NVS (`storage.c`) + dreno no reconnect (`net.c`); teste em HW pendente |
-| RF09 | Normalização (retorno à faixa) | ✅ | evento `normalized=true` inserido + mensagem de retorno (sim.) |
+| RF08 | Buffer offline + retransmissão | ✅ | ring buffer NVS (`storage.c`) encheu offline e drenou no reconnect (`net.c`) na placa (R6) |
+| RF09 | Normalização (retorno à faixa) | ✅ | uma normalização ao voltar à faixa (R5) → evento `normalized=true` + Telegram (R6) |
 | RF10 | Comando `/status` | ⏳ | implementado no bridge; testar com bot real |
 | RF11 | Persistência + export CSV | ✅ | linhas em `readings`/`events` (sim.); export em `cloud/SUPABASE.md` |
 

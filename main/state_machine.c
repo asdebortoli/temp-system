@@ -5,9 +5,8 @@
  * botão de pânico (sensors_get_panic_sem). Para cada leitura publica a telemetria e
  * avalia a temperatura; o pânico é tratado imediatamente com prioridade máxima (RN02).
  *
- * Escopo desta entrega: apenas TEMPERATURA (DS18B20) e PÂNICO. Umidade, porta e
- * energia dependem de sensores ainda não validados e ficam desativados de propósito
- * para não gerar alertas falsos na apresentação (ver TODOs abaixo).
+ * Escopo do produto (monitor de geladeira): apenas TEMPERATURA (DS18B20) e PÂNICO.
+ * Umidade, porta e energia foram removidas do produto.
  */
 #include "state_machine.h"
 #include "sensors.h"
@@ -33,10 +32,7 @@ const char *event_type_str(event_type_t type)
 {
     switch (type) {
         case EV_THERMAL:  return "thermal";
-        case EV_HUMIDITY: return "humidity";
-        case EV_DOOR:     return "door";
         case EV_PANIC:    return "panic";
-        case EV_POWER:    return "power";
         default:          return "unknown";
     }
 }
@@ -81,15 +77,26 @@ static void evaluate_thermal(const sensor_reading_t *r)
     }
 }
 
-/* E5 — pânico: prioridade máxima (RN02). Aciona o buzzer, emite o evento e
- * desliga o buzzer após uma janela curta. */
+/* Estado do pânico (E5): alterna a cada toque no botão (RN02). */
+static bool s_panic_active = false;
+
+/* E5 — pânico com TOGGLE, não-bloqueante (prioridade máxima, RN02):
+ *   1º toque  → liga o buzzer + evento panic (E5/CRIT).
+ *   2º toque  → desliga o buzzer + evento de retorno à normalidade (normalized=true),
+ *               que a ponte traduz em "fim do pânico" no Telegram. */
 static void handle_panic(void)
 {
-    ESP_LOGW(TAG, "E5 PÂNICO — emergência, prioridade máxima (RN02)");
-    buzzer_on();
-    emit_event(EV_PANIC, "E5", "CRIT", NAN, NAN, false);
-    vTaskDelay(pdMS_TO_TICKS(3000));   /* sinalização audível local (~3 s) */
-    buzzer_off();
+    s_panic_active = !s_panic_active;
+
+    if (s_panic_active) {
+        ESP_LOGW(TAG, "E5 PÂNICO — emergência acionada (RN02)");
+        buzzer_on();
+        emit_event(EV_PANIC, "E5", "CRIT", NAN, NAN, false);
+    } else {
+        ESP_LOGI(TAG, "E5 pânico encerrado — buzzer desligado");
+        buzzer_off();
+        emit_event(EV_PANIC, "E1", "INFO", NAN, NAN, true);
+    }
 }
 
 static void state_machine_task(void *arg)
@@ -115,10 +122,6 @@ static void state_machine_task(void *arg)
             if (xQueueReceive(q, &r, 0) == pdTRUE) {
                 net_publish_telemetry(&r);      /* telemetria de toda leitura */
                 evaluate_thermal(&r);           /* E1/E2 */
-                /* TODO (fora do escopo — sensores não validados):
-                 *   E4 umidade  → avaliar r.hum_pct vs [HUM_MIN_PCT, HUM_MAX_PCT]
-                 *   E3 porta    → r.light > DOOR_LIGHT_THRESHOLD por DOOR_OPEN_CRITICAL_S
-                 *   E6 energia  → !r.mains_ok */
             }
         }
     }

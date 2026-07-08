@@ -1,5 +1,5 @@
 /*
- * sensors.h — Aquisição de sensores (DS18B20, DHT22, LDR, rede elétrica, pânico, buzzer).
+ * sensors.h — Aquisição de sensores (DS18B20, pânico, buzzer).
  *
  * Chunk B: drivers reais + tarefa periódica de aquisição. A cada SAMPLE_INTERVAL_S a
  * tarefa empilha um sensor_reading_t na fila exposta por sensors_get_queue(); o botão de
@@ -18,14 +18,11 @@
 
 /*
  * Amostra de sensores publicada na fila de aquisição (PLAN §6 — payload de telemetria).
- * Campos inválidos (falha de leitura) são marcados: NAN para floats, -1 para light.
+ * Leitura inválida (falha do DS18B20) é marcada com NAN.
  */
 typedef struct {
     int64_t ts;        /* epoch em segundos (time(NULL); ~0 até o SNTP do Chunk D) */
     float   temp_c;    /* °C  — NAN se a leitura do DS18B20 falhar  */
-    float   hum_pct;   /* %UR — NAN se a leitura do DHT22 falhar    */
-    int     light;     /* leitura ADC bruta do LDR; -1 se falhar    */
-    bool    mains_ok;  /* true se a rede elétrica está presente (RF06) */
 } sensor_reading_t;
 
 /* Inicializa todos os drivers e cria as tarefas de aquisição e de pânico. */

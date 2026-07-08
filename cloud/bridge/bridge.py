@@ -279,7 +279,10 @@ def main():
     if not SUPABASE_KEY:
         log.error("SUPABASE_KEY vazio — configure o .env (veja .env.example)")
 
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    # client_id fixo: o broker permite só UMA conexão com este id, então uma 2ª instância
+    # da bridge derruba a 1ª em vez de entregar tudo em duplicado (mensagens repetidas no
+    # Telegram). Evita o bug de duas bridges rodando ao mesmo tempo.
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="tmt-bridge")
     client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
     client.tls_set(ca_certs=MQTT_CAFILE, tls_version=ssl.PROTOCOL_TLS_CLIENT)
     client.tls_insecure_set(True)   # CA validada; ignora o CN (broker local self-signed)

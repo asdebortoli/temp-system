@@ -34,10 +34,25 @@ static void heap_monitor_task(void *arg)
 
 void app_main(void)
 {
+    /* Silencia os dumps verbosos do driver Wi-Fi/PHY e da configuração de GPIO, que
+     * poluíam o console a cada boot/leitura sem valor de diagnóstico no dia a dia. */
+    esp_log_level_set("wifi", ESP_LOG_WARN);
+    esp_log_level_set("wifi_init", ESP_LOG_WARN);
+    esp_log_level_set("phy_init", ESP_LOG_WARN);
+    esp_log_level_set("gpio", ESP_LOG_WARN);
+    /* O driver RMT do 1-Wire loga um ERRO "hw buffer too small" a cada leitura do DS18B20
+     * (inerente ao RMT do ESP32 clássico, sem DMA). A leitura ainda completa e passa no CRC
+     * — temperatura válida —, então silenciamos totalmente a tag "rmt". Falha real do sensor
+     * aparece como temp=nan e erros da tag "ds18b20", que continuam visíveis. */
+    esp_log_level_set("rmt", ESP_LOG_NONE);
+
     ESP_LOGI(TAG, "==============================================");
     ESP_LOGI(TAG, " TMT — Monitoramento Térmico  (fw %s)", FW_VERSION);
     ESP_LOGI(TAG, " device_id=%s  amostragem=%ds  heartbeat=%ds",
              DEVICE_ID, SAMPLE_INTERVAL_S, HEARTBEAT_INTERVAL_S);
+    ESP_LOGI(TAG, " pinos: ds18b20=GPIO%d  panico=GPIO%d  buzzer=GPIO%d",
+             PIN_DS18B20, PIN_PANIC, PIN_BUZZER);
+    ESP_LOGI(TAG, " faixa térmica: [%.1f, %.1f] °C", TEMP_MIN_C, TEMP_MAX_C);
     ESP_LOGI(TAG, "==============================================");
 
     storage_init();        /* buffer offline (NVS) — Chunk E   */

@@ -102,11 +102,6 @@ void net_publish_telemetry(const sensor_reading_t *r)
     cJSON_AddNumberToObject(j, "ts", (double)r->ts);
     if (isnan(r->temp_c)) cJSON_AddNullToObject(j, "temp_c");
     else                  cJSON_AddNumberToObject(j, "temp_c", r->temp_c);
-    if (isnan(r->hum_pct)) cJSON_AddNullToObject(j, "hum_pct");
-    else                   cJSON_AddNumberToObject(j, "hum_pct", r->hum_pct);
-    if (r->light < 0) cJSON_AddNullToObject(j, "light");
-    else              cJSON_AddNumberToObject(j, "light", r->light);
-    cJSON_AddBoolToObject(j, "mains_ok", r->mains_ok);
 
     char *s = cJSON_PrintUnformatted(j);
     if (s) {

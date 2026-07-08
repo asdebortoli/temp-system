@@ -22,14 +22,12 @@
 /* ---------------------------------------------------------------------------
  * Mapa de pinos (PLAN §2 / Quadro 3)
  * ------------------------------------------------------------------------- */
-#define PIN_DS18B20          4              /* GPIO4  — sensor de temperatura (1-Wire) */
-#define PIN_DHT22            5              /* GPIO5  — sensor de umidade (digital)     */
-#define PIN_LDR_ADC          34             /* GPIO34 — LDR / detecção de porta (ADC1)  */
-#define ADC_CHAN_LDR         ADC_CHANNEL_6  /* GPIO34 = ADC1 canal 6 (driver oneshot)   */
-#define PIN_PANIC            15             /* GPIO15 — botão de pânico (IRQ)           */
-#define PIN_MAINS_ADC        35             /* GPIO35 — sensor de rede elétrica (ADC1)  */
-#define ADC_CHAN_MAINS       ADC_CHANNEL_7  /* GPIO35 = ADC1 canal 7 (driver oneshot)   */
-#define PIN_BUZZER           13             /* GPIO13 — buzzer (sinalização local)      */
+#define PIN_DS18B20          4              /* GPIO4  — sensor de temperatura (1-Wire)  */
+#define PIN_PANIC            15             /* GPIO15 — botão de pânico (IRQ). ATENÇÃO:  */
+                                            /*          strapping pin — o botão precisa  */
+                                            /*          estar SOLTO no boot (nível alto). */
+#define PIN_BUZZER           13             /* GPIO13 — buzzer PASSIVO via transistor NPN */
+                                            /*          S8050; tom gerado por PWM (LEDC)  */
 
 /* ---------------------------------------------------------------------------
  * Intervalos (segundos)
@@ -39,30 +37,23 @@
 
 /* ---------------------------------------------------------------------------
  * Limiares / thresholds (RN03 — parametrizáveis)
- * Padrão: geladeira de alimentos (0–5 °C)
+ * Valor de TESTE DE BANCADA: com TEMP_MAX_C 28 °C a temperatura ambiente fica
+ * "normal" e basta aquecer o sensor com a mão para cruzar o limite e disparar o
+ * alerta térmico. Para geladeira de alimentos (produção), use TEMP_MAX_C 5.0f —
+ * faixa 0–5 °C (ANVISA RDC 216/2004).
  * ------------------------------------------------------------------------- */
 #define TEMP_MIN_C           0.0f           /* °C  — abaixo disso: alerta térmico */
-#define TEMP_MAX_C           23.0f           /* °C  — acima disso:  alerta térmico */
-#define HUM_MIN_PCT          30.0f          /* %UR — abaixo disso: alerta umidade */
-#define HUM_MAX_PCT          70.0f          /* %UR — acima disso:  alerta umidade */
-#define DOOR_LIGHT_THRESHOLD 2000           /* leitura ADC bruta do LDR: acima = porta aberta */
-#define DOOR_OPEN_CRITICAL_S 60             /* segundos de porta aberta até alerta crítico    */
-#define MAINS_ADC_THRESHOLD  1500           /* leitura ADC bruta da rede: abaixo = sem energia (RF06) */
+#define TEMP_MAX_C           20.0f          /* °C  — acima disso:  alerta térmico */
 
 /* ---------------------------------------------------------------------------
  * Aquisição (Chunk B)
  * ------------------------------------------------------------------------- */
 #define PANIC_DEBOUNCE_MS    200            /* janela de debounce do botão de pânico (ISR)         */
 
-/* Sensor de umidade: 11 = DHT11, 22 = DHT22/AM2302. Diferem no pulso de início (DHT11 ≥18 ms,
- * DHT22 ≥1 ms) e na codificação (DHT11 = inteiro.decimal; DHT22 = valor×10 em 16 bits). */
-#define DHT_MODEL            11
-#if DHT_MODEL == 11
-#define DHT_START_LOW_US     20000          /* DHT11: linha baixa ≥18 ms */
-#else
-#define DHT_START_LOW_US     1200           /* DHT22: linha baixa ≥1 ms  */
-#endif
-#define DHT_BIT_THRESHOLD_US 50             /* pulso alto acima disso ⇒ bit '1' (igual nos dois)   */
+/* Buzzer PASSIVO (sem oscilador próprio): o tom é gerado por PWM (LEDC) em um único GPIO,
+ * que chaveia a base do transistor NPN — o buzzer enxerga uma onda quadrada de ~5 V (VIN).
+ * A frequência abaixo é o tom audível; ajuste à ressonância do seu buzzer (2–4 kHz). */
+#define BUZZER_FREQ_HZ       2700           /* Hz — frequência do tom (máx. volume na ressonância) */
 
 /* ---------------------------------------------------------------------------
  * Contrato MQTT (PLAN §6) — tópico base: tmt/<device_id>/<sufixo>
