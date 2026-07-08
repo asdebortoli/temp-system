@@ -1,45 +1,46 @@
 # TMT — Sistema Inteligente de Monitoramento Térmico de Baixo Custo
 
 Projeto de extensão (UNIVALI). Firmware ESP-IDF/FreeRTOS para **ESP32-WROOM-32 (DevKit V1)** que
-monitora a temperatura, a umidade e o estado de ambientes refrigerados de pequenos
-estabelecimentos (restaurantes, laboratórios), publicando telemetria e alertas em tempo real.
+monitora a **temperatura** de ambientes refrigerados (geladeiras) de pequenos estabelecimentos
+(restaurantes, laboratórios), com **botão de pânico** e **buzzer**, publicando telemetria e
+alertas em tempo real.
 
 Acadêmicos: Alexandre Debortoli de Souza e Maria Julia Lamim Severino · Orientador: Felipe Viel
 
 ## Arquitetura
 
 ```
-ESP32 (sensores → máquina de estados E1–E6 → MQTT/TLS)
+ESP32 (DS18B20 → máquina de estados E1/E2/E5 → MQTT/TLS)
    → Mosquitto (broker, TLS)
    → Bridge Python (paho → Supabase → Telegram)
    → Supabase (Postgres)  +  Telegram (responsável)
 ```
 
-O ESP32 lê os sensores, aplica a máquina de estados (E1 normal … E6 falha de energia) e publica
-em um broker MQTT sobre TLS. Um serviço-ponte em Python ingere as mensagens, aplica regras de
-negócio, persiste no Supabase e notifica o responsável via Telegram. Quando offline, o firmware
-armazena as leituras em um buffer em NVS e retransmite ao reconectar.
+O ESP32 lê a temperatura, aplica a máquina de estados — **E1** normal, **E2** alerta térmico e
+**E5** pânico — e publica em um broker MQTT sobre TLS. Um serviço-ponte em Python ingere as
+mensagens, aplica regras de negócio, persiste no Supabase e notifica o responsável via Telegram.
+Quando offline, o firmware armazena as leituras em um buffer em NVS e retransmite ao reconectar.
 
-> **Estado atual (demo de temperatura):** o pipeline está funcional ponta a ponta para o sensor
-> **DS18B20** (temperatura), único validado em hardware. A máquina de estados avalia alerta
-> térmico (E2), normalização (RF09) e pânico (E5); umidade/porta/energia estão desativados no
-> firmware até que seus sensores sejam validados. Broker e Supabase rodam **localmente em Docker**
-> e o bridge roda no host — veja [`cloud/`](cloud/).
+> **Escopo (monitor de geladeira):** o produto usa **um sensor de temperatura (DS18B20)**, um
+> **botão de pânico** (toggle: liga/desliga o buzzer a cada toque) e um **buzzer passivo** (tom
+> por PWM via transistor NPN). Umidade, porta e falha de energia foram removidas do produto. O
+> fluxo foi validado na placa ponta a ponta pela série de correção **R1–R6** (`tasks/`). Broker e
+> Supabase rodam **localmente em Docker** e o bridge roda no host — veja [`cloud/`](cloud/).
 
-Visão completa, requisitos e divisão do trabalho em **[`PLAN.md`](PLAN.md)**. O trabalho é
-dividido em chunks independentes em **[`tasks/`](tasks/)** (`ChunkA.md` … `ChunkH.md`),
-executados em ordem A → H.
+Visão completa e requisitos em **[`PLAN.md`](PLAN.md)** (§10 registra o histórico A–H → R1–R6).
+A série de correção que definiu o produto atual está em **[`tasks/`](tasks/)**
+(`ChunkR1.md` … `ChunkR6.md`), executada e testada na placa em ordem R1 → R6.
 
-## Mapa de pinos (Quadro 3)
+## Mapa de pinos
 
-| Componente           | GPIO   | Função                              |
-|----------------------|--------|-------------------------------------|
-| DS18B20 (temperatura)| GPIO4  | Temperatura interna (1-Wire)        |
-| DHT22 (umidade)      | GPIO5  | Umidade relativa (digital)          |
-| LDR (luz)            | GPIO34 | Detecção de porta aberta (ADC1)     |
-| Botão de pânico      | GPIO15 | Acionamento de emergência (IRQ)     |
-| Sensor de rede       | GPIO35 | Detecção de falta de energia (ADC1) |
-| Buzzer               | GPIO13 | Sinalização sonora local            |
+| Componente           | GPIO   | Função                                                |
+|----------------------|--------|-------------------------------------------------------|
+| DS18B20 (temperatura)| GPIO4  | Temperatura (1-Wire; pull-up externo 4.7 kΩ ↔ 3V3)    |
+| Botão de pânico      | GPIO15 | Emergência (IRQ, INPUT_PULLUP; strapping — solto no boot) |
+| Buzzer passivo       | GPIO13 | Sinalização sonora (tom PWM via transistor NPN S8050) |
+
+Alimentação por USB; o buzzer é alimentado pelos 5 V do pino VIN (o GPIO só chaveia a base do
+transistor). Diodo 1N4007 em paralelo com o buzzer (cátodo para o +5 V).
 
 ## Estrutura do firmware (`main/`)
 
@@ -47,8 +48,8 @@ executados em ordem A → H.
 |-------------------------|-------------------------------------------------------|-------|
 | `main.c`                | `app_main`: inicialização e criação das tarefas       | A     |
 | `config.h`              | Pinos, limiares, intervalos, tópicos MQTT (RN03)      | A     |
-| `sensors.{c,h}`         | Drivers e aquisição dos sensores                      | B     |
-| `state_machine.{c,h}`   | Lógica dos estados E1–E6, dedup e normalização        | C     |
+| `sensors.{c,h}`         | Driver do DS18B20, botão de pânico e buzzer + aquisição| B     |
+| `state_machine.{c,h}`   | Lógica dos estados E1/E2/E5, dedup e normalização     | C     |
 | `net.{c,h}`             | Wi-Fi + cliente MQTT/TLS                               | D     |
 | `storage.{c,h}`         | Buffer offline em NVS (partição `buffer`)             | E     |
 
