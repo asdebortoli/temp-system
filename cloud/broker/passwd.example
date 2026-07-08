@@ -1,0 +1,4 @@
+# passwd.example — o arquivo real (./passwd) é gerado por gen-certs.sh com
+# mosquitto_passwd e está no .gitignore. Usuário/senha padrão: tmt / tmt.
+# Para trocar: MQTT_USER=... MQTT_PASS=... ./gen-certs.sh
+tmt:$7$101$exemplo_hash_gerado_pelo_mosquitto_passwd
